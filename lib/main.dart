@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:projecttwo/screens/homescreen.dart';
 import 'package:projecttwo/screens/splashscreen.dart';
-import 'firebase_options.dart';
+import 'screens/firebase_options.dart';
 
 Future<void> main() async {
   await Firebase.initializeApp(
