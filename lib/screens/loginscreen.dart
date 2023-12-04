@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:projecttwo/screens/homescreen.dart';
 import '../firebase_options.dart';
 
 class EmailPasswordForm extends StatefulWidget {
@@ -32,19 +33,21 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
         _userEmail = _emailController.text;
         _initialState = false;
         if(_success){
-          _userss.where("userid", isEqualTo: widget.auth.currentUser!.uid).get().then(
+          print('uid');
+          print(widget.auth.currentUser!.uid);
+          _userss.where("uid", isEqualTo: widget.auth.currentUser!.uid).get().then(
                 (querySnapshot) {
               print("Successfully completed");
               for (var docSnapshot in querySnapshot.docs) {
                 print('${docSnapshot.id} => ${docSnapshot.data()}');
               }
               DocumentSnapshot documentSnapshot = querySnapshot.docs[0];
-              /*Navigator.push(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (BuildContext context) => MessageBoardHome(auth: widget.auth, documentSnapshot: documentSnapshot),
+                  builder: (BuildContext context) => HomeScreen(auth: widget.auth, userDocSnap: documentSnapshot),
                 ),
-              );*/
+              );
             },
             onError: (e) => print("Error completing: $e"),
           );
@@ -245,12 +248,12 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
                               print('${docSnapshot.id} => ${docSnapshot.data()}');
                             }
                             DocumentSnapshot documentSnapshot = querySnapshot.docs[0];
-                            /*Navigator.push(
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (BuildContext context) => MessageBoardHome(auth: widget.auth, documentSnapshot: documentSnapshot),
+                                builder: (BuildContext context) => HomeScreen(auth: widget.auth, userDocSnap: documentSnapshot),
                               ),
-                            );*/
+                            );
                           },
                           onError: (e) => print("Error completing: $e"),
                         );
