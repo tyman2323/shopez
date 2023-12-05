@@ -6,13 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="aec692c2-d258-4e9a-91be-d6e76794e24e" name="Changes" comment="splash and login/signup created.">
       <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/058da3547cf3b90fafce886fc49fc1fd.cache.dill.track.dill" beforeDir="false" afterPath="$PROJECT_DIR$/build/058da3547cf3b90fafce886fc49fc1fd.cache.dill.track.dill" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/homescreen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/homescreen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/loginscreen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/loginscreen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/settings.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/settings.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/shoppingcart.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/shoppingcart.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/splashscreen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/splashscreen.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,6 +21,9 @@
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectId" id="2Z3h8DXDOhkk5JRKW7JS6u0dEGA" />
   <component name="ProjectView">
