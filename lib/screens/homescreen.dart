@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:projecttwo/screens/productscreen.dart';
 import 'package:projecttwo/screens/settings.dart';
 import 'package:projecttwo/screens/shoppingcart.dart';
 
@@ -79,11 +80,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (BuildContext context) => const SettingsScreen(),
+                  builder: (BuildContext context) => SettingsScreen(auth: widget.auth, userDocSnap: widget.userDocSnap),
                 ),
               );
             },
-            child: const Icon(Icons.logout),
+            child: const Icon(Icons.settings),
           ),
         ],
       ),
@@ -146,6 +147,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _productScreen(DocumentSnapshot prodSnap) async {
+
+    await showModalBottomSheet(
+      isScrollControlled: true,
+      context: context,
+      builder: (BuildContext ctx) {
+        return ProductScreen(auth: widget.auth, userDocSnap: widget.userDocSnap, productSnap: prodSnap);
+      }
+    );
+  }
+
   Widget buildProductList(String searchText) {
     return Flexible(
       child: StreamBuilder(
@@ -167,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     title: Text(documentSnapshot['product-name']),
                     trailing: SizedBox(
-                      width: 100,
+                      width: 175,
                       child: Row(
                         children: [
                           IconButton(
@@ -188,14 +200,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           IconButton(
                               onPressed: () {
-                                Navigator.push(
+                                /*Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (BuildContext context) => ShoppingCartScreen(
                                         auth: widget.auth,
                                         userDocSnap: widget.userDocSnap), //change to docref
                                   ),
-                                );
+                                );*/
+                                _productScreen(documentSnapshot); //- call this when product screen function is done
                               },
                               icon: const Icon(Icons.arrow_forward, color: Colors.white70)
                           )

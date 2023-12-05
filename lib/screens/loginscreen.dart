@@ -258,7 +258,6 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
                           onError: (e) => print("Error completing: $e"),
                         );
                       }
-
                     }
                   },
                 )
