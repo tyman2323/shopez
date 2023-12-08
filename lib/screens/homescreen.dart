@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:projecttwo/screens/productscreen.dart';
+import 'package:projecttwo/screens/sellersdashboard.dart';
 import 'package:projecttwo/screens/settings.dart';
 import 'package:projecttwo/screens/shoppingcart.dart';
 
@@ -25,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final CollectionReference _userss =
       FirebaseFirestore.instance.collection('users');
-
 
   Future<void> _increaseProduct(String productId) async {
     final CollectionReference currentCart = FirebaseFirestore.instance
@@ -80,12 +80,26 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (BuildContext context) => SettingsScreen(auth: widget.auth, userDocSnap: widget.userDocSnap),
+                  builder: (BuildContext context) => SettingsScreen(
+                      auth: widget.auth, userDocSnap: widget.userDocSnap),
                 ),
               );
             },
             child: const Icon(Icons.settings),
           ),
+          ElevatedButton(
+            onPressed: () {
+              //_signOut(); add to settings page instead
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (BuildContext context) =>
+                      SellerDashboard(auth: widget.auth),
+                ),
+              );
+            },
+            child: const Icon(Icons.money),
+          )
         ],
       ),
       backgroundColor: Colors.black12,
@@ -93,7 +107,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(padding: const EdgeInsets.all(10), child: SizedBox(height: 60, child: buildSearchBar())),
+            Padding(
+                padding: const EdgeInsets.all(10),
+                child: SizedBox(height: 60, child: buildSearchBar())),
             buildProductList(_searchController.text),
           ],
         ),
@@ -148,26 +164,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _productScreen(DocumentSnapshot prodSnap) async {
-
     await showModalBottomSheet(
-      isScrollControlled: true,
-      context: context,
-      builder: (BuildContext ctx) {
-        return ProductScreen(auth: widget.auth, userDocSnap: widget.userDocSnap, productSnap: prodSnap);
-      }
-    );
+        isScrollControlled: true,
+        context: context,
+        builder: (BuildContext ctx) {
+          return ProductScreen(
+              auth: widget.auth,
+              userDocSnap: widget.userDocSnap,
+              productSnap: prodSnap);
+        });
   }
 
   Widget buildProductList(String searchText) {
     return Flexible(
       child: StreamBuilder(
-        stream: searchText == '' ? _productss.snapshots() : _productss.where('product-name', isEqualTo: searchText).snapshots(),
+        stream: searchText == ''
+            ? _productss.snapshots()
+            : _productss
+                .where('product-name', isEqualTo: searchText)
+                .snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> streamSnapshot) {
           if (streamSnapshot.hasData) {
             return ListView.builder(
               itemCount: streamSnapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                final DocumentSnapshot documentSnapshot = streamSnapshot.data!.docs[index];
+                final DocumentSnapshot documentSnapshot =
+                    streamSnapshot.data!.docs[index];
                 return Card(
                   margin: const EdgeInsets.all(10),
                   child: ListTile(
@@ -189,15 +211,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               onPressed: () =>
                                   _decreaseProduct(documentSnapshot.id)),
-                          countText(documentSnapshot.id), //i am having issues accessing user current cart doc.
+                          countText(documentSnapshot
+                              .id), //i am having issues accessing user current cart doc.
                           IconButton(
                               icon: const Icon(
                                 Icons.add,
                                 color: Colors.white70,
                               ),
                               onPressed: () =>
-                                  _increaseProduct(documentSnapshot.id)
-                          ),
+                                  _increaseProduct(documentSnapshot.id)),
                           IconButton(
                               onPressed: () {
                                 /*Navigator.push(
@@ -208,10 +230,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         userDocSnap: widget.userDocSnap), //change to docref
                                   ),
                                 );*/
-                                _productScreen(documentSnapshot); //- call this when product screen function is done
+                                _productScreen(
+                                    documentSnapshot); //- call this when product screen function is done
                               },
-                              icon: const Icon(Icons.arrow_forward, color: Colors.white70)
-                          )
+                              icon: const Icon(Icons.arrow_forward,
+                                  color: Colors.white70))
                         ],
                       ),
                     ),
@@ -227,33 +250,33 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
-  
 
-  Widget countText(String productId){
-    final CollectionReference currentCart = _userss.doc(widget.userDocSnap.id).collection('current_cart');
-    
+  Widget countText(String productId) {
+    final CollectionReference currentCart =
+        _userss.doc(widget.userDocSnap.id).collection('current_cart');
+
     return FutureBuilder(
       future: currentCart.doc('products_$productId').get(),
-      builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-          //Error Handling conditions
-          if (snapshot.hasError) {
-            return const Text("Something went wrong");
-          }
+      builder:
+          (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+        //Error Handling conditions
+        if (snapshot.hasError) {
+          return const Text("Something went wrong");
+        }
 
-          if (snapshot.hasData && !snapshot.data!.exists) {
-            return const Text("0");
-          }
+        if (snapshot.hasData && !snapshot.data!.exists) {
+          return const Text("0");
+        }
 
-          //Data is output to the user
-          if (snapshot.connectionState == ConnectionState.done) {
-            Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
-            return Text("${data['count']}");
-          }
-          
-          return const Text('Loading');
+        //Data is output to the user
+        if (snapshot.connectionState == ConnectionState.done) {
+          Map<String, dynamic> data =
+              snapshot.data!.data() as Map<String, dynamic>;
+          return Text("${data['count']}");
+        }
 
-        },
+        return const Text('Loading');
+      },
     );
   }
 }
