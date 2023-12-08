@@ -41,7 +41,7 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
               for (var docSnapshot in querySnapshot.docs) {
                 print('${docSnapshot.id} => ${docSnapshot.data()}');
               }
-              DocumentSnapshot documentSnapshot = querySnapshot.docs[0];
+              DocumentSnapshot documentSnapshot = querySnapshot.docs.first;
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -226,7 +226,7 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
                         // Persist a new user to Firestore
                         var user = widget.auth.currentUser;
                         if(user != null){
-                          await _userss.add({"userid" : user.uid, "firstname": firstname, "lastname": lastname, "address" : address, "registration_time" : Timestamp.fromDate(DateTime.now())});
+                          await _userss.add({"uid" : user.uid, "firstname": firstname, "lastname": lastname, "address" : address, "registration_time" : Timestamp.fromDate(DateTime.now())});
                         }
 
                       }
@@ -241,7 +241,7 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
                       _addressController.text = '';
                       //Navigator.of(context).pop();
                       if(_success){
-                        _userss.where("userid", isEqualTo: widget.auth.currentUser!.uid).get().then(
+                        _userss.where("uid", isEqualTo: widget.auth.currentUser!.uid).get().then(
                               (querySnapshot) {
                             print("Successfully completed");
                             for (var docSnapshot in querySnapshot.docs) {
