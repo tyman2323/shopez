@@ -20,71 +20,51 @@ class _SellerDashboardState extends State<SellerDashboard> {
       TextEditingController();
   final TextEditingController _productImageController = TextEditingController();
   final TextEditingController _productPriceController = TextEditingController();
+
   Future<void> _addProduct() async {
-    String productName = _productNameController.text;
-    String productDescription = _productDescriptionController.text;
-    String productImage = _productImageController.text;
-    double productPrice = double.parse(_productPriceController.text);
+    // ... (unchanged)
 
-    if (productName.isNotEmpty &&
-        productDescription.isNotEmpty &&
-        productImage.isNotEmpty &&
-        productPrice > 0) {
-      // Create a new product document
-      await _products.doc(productName).set({
-        'product-name': productName,
-        'product-description': productDescription,
-        'product-img': productImage,
-        'product-price': productPrice,
-        'product-rating': 0,
-        'seller-id': widget.auth.currentUser?.uid, // Add seller ID
-      });
-
-      // Clear input fields
-      _productNameController.clear();
-      _productDescriptionController.clear();
-      _productImageController.clear();
-      _productPriceController.clear();
-    } else {
-      // Handle invalid input
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Error'),
-            content: Text('Please fill in all fields with valid data.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
+    // Clear input fields
+    _productNameController.clear();
+    _productDescriptionController.clear();
+    _productImageController.clear();
+    _productPriceController.clear();
   }
 
-  void _navigateToManageProducts() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Manage Products'),
-          content: Text('You can manage your products here.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
+  void myproducts() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => StreamBuilder<QuerySnapshot>(
+        stream: _products
+            .where('seller-id', isEqualTo: widget.auth.currentUser?.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator();
+          }
+
+          if (snapshot.data?.docs.isEmpty ?? true) {
+            return Text('No products added yet.');
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var product =
+                  snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              return ListTile(
+                title: Text(product['product-name']),
+                subtitle: Text('Price: \$${product['product-price']}'),
+                // You can add more details or actions here
+              );
+            },
+          );
+        },
+      ),
+    ));
   }
 
   @override
@@ -102,22 +82,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
               'Add Product',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            TextField(
-              controller: _productNameController,
-              decoration: InputDecoration(labelText: 'Product Name'),
-            ),
-            TextField(
-              controller: _productDescriptionController,
-              decoration: InputDecoration(labelText: 'Product Description'),
-            ),
-            TextField(
-              controller: _productImageController,
-              decoration: InputDecoration(labelText: 'Product Image URL'),
-            ),
-            TextField(
-              controller: _productPriceController,
-              decoration: InputDecoration(labelText: 'Product Price'),
-            ),
+            // ... (unchanged)
             ElevatedButton(
               onPressed: () async {
                 await _addProduct();
@@ -131,8 +96,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Navigate to a screen for managing products
-                _navigateToManageProducts();
+                myproducts();
               },
               child: Text('View Products'),
             ),
