@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:projecttwo/screens/productscreen.dart';
+import 'package:projecttwo/screens/sellersdashboard.dart';
 import 'package:projecttwo/screens/settings.dart';
 import 'package:projecttwo/screens/shoppingcart.dart';
 
@@ -121,6 +122,19 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: const Icon(Icons.settings),
           ),
+          ElevatedButton(
+            onPressed: () {
+              //_signOut(); add to settings page instead
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (BuildContext context) =>
+                      SellerDashboard(auth: widget.auth),
+                ),
+              );
+            },
+            child: const Icon(Icons.money),
+          )
         ],
       ),
       backgroundColor: Colors.black12,

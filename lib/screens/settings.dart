@@ -237,70 +237,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget buildPreviousPurchasesList() {
-    return Flexible(
-      child: StreamBuilder(
-        stream: _userss.doc(widget.userDocSnap.id).collection('past_orders').snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> streamSnapshot) {
-          if (streamSnapshot.hasData) {
-              return ListView.builder(
-                itemCount: streamSnapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  final DocumentSnapshot documentSnapshot = streamSnapshot.data!.docs[index];
-                  return Card(
-                    margin: const EdgeInsets.all(10),
-                    child: ListTile(
-                      tileColor: Colors.grey,
-                      title: Text(documentSnapshot['orderID'].toString()),
-                    ),
-                  );
-                },
-              );
-            } else {
-                return const Center(
-                  child: Text('No products purchased yet.'),
-                );
+    return StreamBuilder<QuerySnapshot>(
+      stream: _userss
+          .doc(widget.userDocSnap.id)
+          .collection('past_orders')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text("Error: ${snapshot.error}");
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        }
+
+        List<DocumentSnapshot> orders = snapshot.data!.docs;
+
+        if (orders.isEmpty) {
+          return Center(
+            child: Text('No Previous Purchases'),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return SizedBox.shrink();
             }
-          /*return const Center(
-            child: CircularProgressIndicator(),
-          );*/
-        },
-      ),
-    );
-    /*return FutureBuilder<DocumentSnapshot>(
-      future: _userss.doc(widget.userDocSnap.id).get(),
-      builder:
-          (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-        if (snapshot.hasData) {
-          print(snapshot.data);
-          List<dynamic> previousOrders = snapshot.data!['previous-orders'];
-          CollectionReference past_orders = _userss.doc(widget.userDocSnap.id).collection('past_orders');
-          if (previousOrders.isNotEmpty) {
-            return ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: previousOrders.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      previousOrders[index],
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                );
+            DocumentSnapshot orderSnapshot = orders[index];
+            String orderID = orderSnapshot['orderID_str'];
+            DocumentReference docref =
+                FirebaseFirestore.instance.doc('/orders/' + orderID);
+            return ListTile(
+              title: Text('Order ID: $orderID'),
+              onTap: () async {
+                // Fetch the orderID from the current orderSnapshot
+                String orderID = orderSnapshot['orderID_str'];
+                docref.get().then((DocumentSnapshot documentSnapshot) {
+                  if (documentSnapshot.exists) {
+                    var data = documentSnapshot.data() as Map;
+                    var poper = data['products'];
+                    poper = poper[0] as Map;
+                    poper = poper['product'];
+                    poper = poper.toString();
+                    poper = poper.replaceAll(
+                        'DocumentReference<Map<String, dynamic>>(', '');
+                    poper = poper.replaceAll(')', '');
+                    poper = '/' + poper;
+                    DocumentReference prodocref = FirebaseFirestore.instance
+                        .doc('/products/SmrWNSWlOMnbXCZVcvTd');
+                    DocumentReference proocref =
+                        FirebaseFirestore.instance.doc(poper);
+                    print(prodocref);
+                    print(proocref);
+                    if (prodocref == prodocref) {
+                      print('asfasfsdgfskaghnasdg');
+                    }
+                    prodocref.get().then((DocumentSnapshot prosnap) {
+                      if (prosnap.exists) {}
+                    });
+
+                    String address = data['shipping_address'];
+
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Shipping Address'),
+                          content: Text(address),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Close'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  } else {
+                    // Handle the case where order details are not found
+                    print('Error: Order details not found');
+                  }
+                });
               },
             );
-          } else {
-            return const Center(
-              child: Text('No products purchased yet.'),
-            );
-          }
-        }
-        return const Center(
-          child: CircularProgressIndicator(),
+          },
         );
       },
-    );*/
+    );
   }
 }
