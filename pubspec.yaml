@@ -16,6 +16,7 @@ dependencies:
   rflutter_alert: ^2.0.7
   sliding_clipped_nav_bar: ^3.1.0+4
   grouped_list: ^5.1.2
+  firebase_storage: ^11.5.5
 
 dev_dependencies:
   flutter_test:
