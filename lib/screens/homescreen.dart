@@ -1,3 +1,5 @@
+import 'dart:html';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +21,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 // text fields' controllers
-  final SearchController _searchController = SearchController(); //textediting?
+
+  final TextEditingController searchTextController = TextEditingController();
 
   final CollectionReference _productss =
       FirebaseFirestore.instance.collection('products');
@@ -35,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     DocumentReference docRef = currentCart.doc('products_$productId');
     if (docRef != null) {
       await docRef.update({'count': FieldValue.increment(1)});
+      //await currentCart.add({'count' : 1, 'price' : productSnap['price']});
     } else {
       await currentCart.doc('products_$productId').set({'count': 1});
     }
@@ -55,8 +59,39 @@ class _HomeScreenState extends State<HomeScreen> {
     await docRef.update({'count': FieldValue.increment(-1)});
   }
 
+  Future<void> _addProductToCart(DocumentSnapshot productSnap) async {
+    String productId = productSnap.id;
+    final CollectionReference currentCart = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userDocSnap.id)
+        .collection('current_cart');
+    DocumentSnapshot temp = await currentCart.doc('products_$productId').get();
+    if (temp.exists) {
+      currentCart.doc('products_$productId').delete();
+    } else {
+      currentCart.doc('products_$productId').set({
+        "count": 1,
+        'name': productSnap['product-name'],
+        'price': productSnap['product-price']
+      }).onError((e, _) => print("Error writing document: $e"));
+      ;
+    }
+  }
+
+  //Future<void> addToCart
+  Widget productList = Container(
+    child: const Text('No matching products'),
+  );
+  void rebuildProductList(String str) {
+    setState(() {
+      productList = buildProductList(str);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    productList = buildProductList(searchTextController.text);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shop EZ'),
@@ -108,59 +143,44 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Padding(
-                padding: const EdgeInsets.all(10),
-                child: SizedBox(height: 60, child: buildSearchBar())),
-            buildProductList(_searchController.text),
+              padding: const EdgeInsets.all(10),
+              child: SizedBox(
+                height: 60,
+                child: Flexible(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 400,
+                        child: TextField(
+                          controller: searchTextController,
+                          decoration:
+                              const InputDecoration(hintText: 'Enter Search'),
+                          onSubmitted: (String str) {
+                            setState(() {
+                              productList =
+                                  buildProductList(searchTextController.text);
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      ElevatedButton(
+                        onPressed: () {
+                          rebuildProductList(searchTextController.text);
+                          //searchTextController.text = '';
+                        },
+                        child: const Text('Load Product List'),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            productList,
           ],
         ),
       ),
     );
-  }
-
-  Widget buildSearchBar() {
-    //bool isDark = false;
-    //final ThemeData themeData = ThemeData(useMaterial3: true, brightness: isDark ? Brightness.dark : Brightness.light);
-
-    return SearchAnchor(
-        builder: (BuildContext context, SearchController controller) {
-      return SearchBar(
-        controller: _searchController,
-        padding: const MaterialStatePropertyAll<EdgeInsets>(
-            EdgeInsets.symmetric(horizontal: 16.0)),
-        onTap: () {
-          _searchController.openView();
-        },
-        onChanged: (_) {
-          _searchController.openView();
-        },
-        leading: const Icon(Icons.search),
-        /*trailing: <Widget>[
-              Tooltip(message: 'Change brightness mode', child: IconButton(
-                  isSelected: isDark,
-                  onPressed: () {
-                    setState(() {
-                      isDark = !isDark;
-                    });
-                  },
-                  icon: const Icon(Icons.wb_sunny_outlined),
-                  selectedIcon: const Icon(Icons.brightness_2_outlined),
-                ),
-              )
-            ],*/
-      );
-    }, suggestionsBuilder: (BuildContext context, SearchController controller) {
-      return List<ListTile>.generate(5, (int index) {
-        final String item = 'item $index';
-        return ListTile(
-          title: Text(item),
-          onTap: () {
-            setState(() {
-              _searchController.closeView(item);
-            });
-          },
-        );
-      });
-    });
   }
 
   Future<void> _productScreen(DocumentSnapshot prodSnap) async {
@@ -190,36 +210,40 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, index) {
                 final DocumentSnapshot documentSnapshot =
                     streamSnapshot.data!.docs[index];
+                bool temp = true;
                 return Card(
                   margin: const EdgeInsets.all(10),
                   child: ListTile(
                     tileColor: Colors.grey,
-                    leading: Image.asset(
-                      documentSnapshot['product-img'][0].toString(),
+                    leading: const Icon(Icons.image),
+                    /*Image.network(
+                      documentSnapshot['product-img-url'].toString(),
                       height: 25,
                       width: 25,
-                    ),
+                    ),*/
                     title: Text(documentSnapshot['product-name']),
                     trailing: SizedBox(
-                      width: 175,
+                      width: 125,
                       child: Row(
                         children: [
-                          IconButton(
+                          /*IconButton(
                               icon: const Icon(
                                 Icons.remove,
                                 color: Colors.white70,
                               ),
                               onPressed: () =>
                                   _decreaseProduct(documentSnapshot.id)),
-                          countText(documentSnapshot
-                              .id), //i am having issues accessing user current cart doc.
+                          countText(documentSnapshot.id), //i am having issues accessing user current cart doc.
+                          */
                           IconButton(
                               icon: const Icon(
                                 Icons.add,
                                 color: Colors.white70,
                               ),
-                              onPressed: () =>
-                                  _increaseProduct(documentSnapshot.id)),
+                              onPressed: () {
+                                temp = !temp;
+                                _addProductToCart(documentSnapshot);
+                              }),
                           IconButton(
                               onPressed: () {
                                 /*Navigator.push(

@@ -20,12 +20,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Onyemaobi MAD Homework 3',
+      title: 'ShopEZ',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightBlue), //Colors.green
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: Colors.lightBlue), //Colors.green
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Onyemaobi MAD Homework 3'),
+      home: const MyHomePage(title: 'ShopEZ'),
     );
   }
 }
@@ -39,7 +40,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   @override
   void initState() {
     super.initState();
@@ -75,62 +75,49 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             //RegisterEmailSection(auth: _auth),
-            Image.asset('assets/images/splash_shop_ez.png', scale: 2.0,),
+            Image.asset(
+              'assets/images/splash_shop_ez.png',
+              scale: 2.0,
+            ),
             const SizedBox(height: 25),
             ElevatedButton(
               onPressed: () {
-                ///Navigator.push(context,
-                /// MaterialPageRoute(
-                ///   builder: (BuildContext context) => EmailPasswordForm(auth: _auth),
-                // ),
-                //  );
-                showDialog(context: context,
+                showDialog(
+                    context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
                           scrollable: true,
                           title: const Text('Login'),
-                          content: Stack(
-                              clipBehavior: Clip.none,
-                              children: <Widget>[
-                                Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: EmailPasswordForm(auth: _auth)
-                                ),
-                              ]
-                          )
-                      );
-                    }
-                );
+                          content:
+                              Stack(clipBehavior: Clip.none, children: <Widget>[
+                            Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: EmailPasswordForm(auth: _auth)),
+                          ]));
+                    });
               },
               child: const Text('Sign In'),
             ),
             const SizedBox(height: 25),
             ElevatedButton(
               onPressed: () {
-
-                ///Navigator.push(context,
-                /// MaterialPageRoute(
-                ///   builder: (BuildContext context) => EmailPasswordForm(auth: _auth),
-                // ),
-                //  );
-                showDialog(context: context,
+                showDialog(
+                    context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
                         scrollable: true,
                         title: const Text('Sign Up'),
-                        content: Stack(
-                            clipBehavior: Clip.none,
-                            children: <Widget>[
-                              Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: RegisterEmailSection(auth: _auth)
-                              ),
-                            ]),);
+                        content:
+                            Stack(clipBehavior: Clip.none, children: <Widget>[
+                          Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: RegisterEmailSection(auth: _auth)),
+                        ]),
+                      );
                     });
               },
               child: const Text('Register'),
             ),
-
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
