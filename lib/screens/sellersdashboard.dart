@@ -16,8 +16,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
       FirebaseFirestore.instance.collection('products');
 
   final TextEditingController _productNameController = TextEditingController();
-  final TextEditingController _productDescriptionController =
-      TextEditingController();
+  final TextEditingController _productDescriptionController = TextEditingController();
   final TextEditingController _productImageController = TextEditingController();
   final TextEditingController _productPriceController = TextEditingController();
 
@@ -25,7 +24,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
     try {
       await _products.add({
         'product-description': _productDescriptionController.text,
-        'product-img': _productImageController.text,
+        'product-img-url': _productImageController.text,
         'product-name': _productNameController.text,
         'product-price': double.parse(_productPriceController.text),
         'seller-id': widget.auth.currentUser?.uid,

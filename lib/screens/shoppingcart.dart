@@ -1,6 +1,9 @@
+// import 'dart:html';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:projecttwo/screens/homescreen.dart';
 import 'package:projecttwo/screens/productscreen.dart';
 import 'package:projecttwo/screens/sellersdashboard.dart';
 import 'package:projecttwo/screens/settings.dart';
@@ -19,14 +22,15 @@ class ShoppingCartScreen extends StatefulWidget {
 
 class _ShoppingCartScreen extends State<ShoppingCartScreen> {
   double totalCost = 0.0;
-// text fields' controllers
-  final SearchController _searchController = SearchController(); //textediting?
+// text fields' controllers //textediting?
 
   final CollectionReference _productss =
-      FirebaseFirestore.instance.collection('products');
+  FirebaseFirestore.instance.collection('products');
 
   final CollectionReference _userss =
-      FirebaseFirestore.instance.collection('users');
+  FirebaseFirestore.instance.collection('users');
+
+  Map<String, ValueNotifier<int>> productCountNotifiers = {};
 
   Future<void> _increaseProduct(String productId) async {
     final CollectionReference currentCart = FirebaseFirestore.instance
@@ -34,11 +38,14 @@ class _ShoppingCartScreen extends State<ShoppingCartScreen> {
         .doc(widget.userDocSnap.id)
         .collection('current_cart');
     DocumentReference docRef = currentCart.doc('products_$productId');
-    try {
+    DocumentSnapshot docSnap = await docRef.get();
+    if (docSnap.exists) {
       await docRef.update({'count': FieldValue.increment(1)});
-    } on Exception catch (e) {
+    } else {
       await currentCart.doc('products_$productId').set({'count': 1});
     }
+    int newCount = (productCountNotifiers[productId]?.value ?? 0) + 1;
+    productCountNotifiers[productId]?.value = newCount;
   }
 
   Future<void> _decreaseProduct(String productId) async {
@@ -47,21 +54,83 @@ class _ShoppingCartScreen extends State<ShoppingCartScreen> {
         .doc(widget.userDocSnap.id)
         .collection('current_cart');
     DocumentReference docRef = currentCart.doc('products_$productId');
-    if (docRef != null) {
-      DocumentSnapshot docSnap = await docRef.get();
+    DocumentSnapshot docSnap = await docRef.get();
+    bool isZero = false;
+    if (docSnap.exists) {
       if (docSnap['count'] == 1) {
         await currentCart.doc(docSnap.id).delete();
+      } else {
+        await docRef.update({'count': FieldValue.increment(-1)});
       }
+    } else {
+      isZero = true;
     }
-    await docRef.update({'count': FieldValue.increment(-1)});
+    int newCount = (productCountNotifiers[productId]?.value ?? 0) - 1;
+    if (isZero) {
+      newCount = 0;
+    }
+    productCountNotifiers[productId]?.value = newCount;
+  }
+
+  Future<double> calcTotalCost() async {
+    double totalCost = 0;
+
+    try {
+      QuerySnapshot productsSnapshot = await _productss.get();
+
+      for (QueryDocumentSnapshot productDoc in productsSnapshot.docs) {
+        String productId = productDoc.id;
+        print(productId);
+        int count = await getCountInt(productId);
+
+        if (count > 0) {
+          int productPrice = productDoc["product-price"];
+          totalCost += productPrice * count;
+        }
+      }
+    } catch (e) {
+      print("Error calculating total cost: $e");
+      // You can handle errors as needed
+    }
+    return totalCost;
+  }
+
+  Widget checkoutFooter = Container();
+
+  Widget productList = Container(
+    child: const Text('No products in cart.'),
+  );
+
+  void rebuildProductList() {
+    setState(() {
+      productList = buildProductList();
+      Future.delayed(const Duration(seconds: 1));
+    });
+  }
+
+  void rebuildFooter(){
+    setState(() {
+      checkoutFooter = ShoppingCartFooter(
+          totalCostFuture: calcTotalCost(),
+          auth: widget.auth,
+          userDocSnap: widget.userDocSnap
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    checkoutFooter = ShoppingCartFooter(
+        totalCostFuture: calcTotalCost(),
+        auth: widget.auth,
+        userDocSnap: widget.userDocSnap
+    );
+    productList = buildProductList();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Checkout Page'),
+        title: const Text('Checkout page'),
         actions: <Widget>[
           ElevatedButton(
             onPressed: () {
@@ -96,161 +165,106 @@ class _ShoppingCartScreen extends State<ShoppingCartScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-                padding: const EdgeInsets.all(10),
-                child: SizedBox(height: 60, child: buildSearchBar())),
-            buildProductList(_searchController.text),
-            Text("Total Cost: $totalCost")
+            productList,
+            checkoutFooter,
           ],
         ),
       ),
     );
   }
 
-  Widget buildSearchBar() {
-    //bool isDark = false;
-    //final ThemeData themeData = ThemeData(useMaterial3: true, brightness: isDark ? Brightness.dark : Brightness.light);
-
-    return SearchAnchor(
-        builder: (BuildContext context, SearchController controller) {
-      return SearchBar(
-        controller: _searchController,
-        padding: const MaterialStatePropertyAll<EdgeInsets>(
-            EdgeInsets.symmetric(horizontal: 16.0)),
-        onTap: () {
-          _searchController.openView();
-        },
-        onChanged: (_) {
-          _searchController.openView();
-        },
-        leading: const Icon(Icons.search),
-        /*trailing: <Widget>[
-              Tooltip(message: 'Change brightness mode', child: IconButton(
-                  isSelected: isDark,
-                  onPressed: () {
-                    setState(() {
-                      isDark = !isDark;
-                    });
-                  },
-                  icon: const Icon(Icons.wb_sunny_outlined),
-                  selectedIcon: const Icon(Icons.brightness_2_outlined),
-                ),
-              )
-            ],*/
-      );
-    }, suggestionsBuilder: (BuildContext context, SearchController controller) {
-      return List<ListTile>.generate(5, (int index) {
-        final String item = 'item $index';
-        return ListTile(
-          title: Text(item),
-          onTap: () {
-            setState(() {
-              _searchController.closeView(item);
-            });
-          },
-        );
-      });
-    });
-  }
-
-  Future<void> _productScreen(DocumentSnapshot prodSnap) async {
-    await showModalBottomSheet(
-        isScrollControlled: true,
-        context: context,
-        builder: (BuildContext ctx) {
-          return ProductScreen(
-              auth: widget.auth,
-              userDocSnap: widget.userDocSnap,
-              productSnap: prodSnap);
-        });
-  }
-
-  Widget buildProductList(String searchText) {
+  Widget buildProductList() {
     return Flexible(
       child: StreamBuilder(
-        stream: searchText == ''
-            ? _productss.snapshots()
-            : _productss
-                .where('product-name', isEqualTo: searchText)
-                .snapshots(),
+        stream: _productss.snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> streamSnapshot) {
           if (streamSnapshot.hasData) {
-            totalCost = 0;
             return ListView.builder(
               itemCount: streamSnapshot.data!.docs.length,
               itemBuilder: (context, index) {
                 print("Failing here");
 
                 final DocumentSnapshot documentSnapshot =
-                    streamSnapshot.data!.docs[index];
-
+                streamSnapshot.data!.docs[index];
                 return FutureBuilder<int>(
-                  future: getCountText(documentSnapshot.id),
+                  future: getCountInt(documentSnapshot.id),
                   builder: (context, AsyncSnapshot<int> countSnapshot) {
                     if (countSnapshot.connectionState ==
                         ConnectionState.waiting) {
-                      return CircularProgressIndicator();
+                      return const CircularProgressIndicator();
                     } else if (countSnapshot.hasError) {
                       return Text('Error: ${countSnapshot.error}');
                     } else {
                       int count = countSnapshot.data!;
                       if (streamSnapshot.data!.docs.isNotEmpty && count > 0) {
-                        totalCost += documentSnapshot["product-price"];
+                        totalCost += documentSnapshot["product-price"] * count;
                       }
                       // Use count to build your UI here
                       return (streamSnapshot.data!.docs.isNotEmpty && count > 0)
                           ? Card(
-                              margin: const EdgeInsets.all(10),
-                              child: (documentSnapshot.get('product-img-url') !=
-                                          null &&
-                                      documentSnapshot.get('product-img-url') !=
-                                          null)
-                                  ? ListTile(
-                                      tileColor: Color(0xFFe2f3f7),
-                                      leading: Image.network(
-                                        documentSnapshot['product-img-url'],
-                                        height: 25,
-                                        width: 25,
-                                      ),
-                                      title: Text(
-                                        (documentSnapshot.get("product-name") !=
-                                                null)
-                                            ? documentSnapshot['product-name']
-                                            : "",
-                                      ),
-                                      trailing: SizedBox(
-                                        width: 175,
-                                        child: Column(children: [
-                                          Row(
-                                            children: [
-                                              const Text("Quantity "),
-                                              Text(count
-                                                  .toString()), // Use count here
-                                              const Text(" Item Price: "),
-                                              Text(documentSnapshot[
-                                                      "product-price"]
-                                                  .toString()),
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              const Text(" Cost: "),
-                                              Text((documentSnapshot[
-                                                          "product-price"] *
-                                                      count)
-                                                  .toString()),
-                                            ],
-                                          )
-                                        ]),
-                                      ),
-                                    )
-                                  : const ListTile(
-                                      tileColor: Color(0xFFFF0000),
-                                      title: Text("No product image"),
-                                    ),
-                            )
+                        margin: const EdgeInsets.all(10),
+                        child: (documentSnapshot.get('product-img-url') !=
+                            null &&
+                            documentSnapshot.get('product-img-url') !=
+                                null)
+                            ? ListTile(
+                          tileColor: const Color(0xFFe2f3f7),
+                          leading: Image.network(
+                            documentSnapshot['product-img-url'],
+                            height: 25,
+                            width: 25,
+                          ),
+                          title: Text(
+                            (documentSnapshot.get("product-name") != null) ? documentSnapshot['product-name'] : "",
+                          ),
+                          trailing: SizedBox(
+                            width: 200,
+                            child: Row(children: [
+                              IconButton(
+                                  icon: const Icon(
+                                    Icons.remove,
+                                    color: Colors.black,
+                                  ),
+                                  onPressed: () {
+                                    _decreaseProduct(documentSnapshot.id);
+                                    rebuildProductList();
+                                    Future.delayed(const Duration(seconds: 1));
+                                    rebuildFooter();
+                                  }
+                              ),
+                              countText(documentSnapshot.id), //i am having issues accessing user current cart doc.
+                              IconButton(
+                                  icon: const Icon(
+                                    Icons.add,
+                                    color: Colors.black,
+                                  ),
+                                  onPressed: () {
+                                    _increaseProduct(documentSnapshot.id);
+                                    rebuildProductList();
+                                    rebuildFooter();
+                                  }
+                              ),
+                              Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text("Quantity: "),
+                                      countText(documentSnapshot.id),
+                                    ],
+                                  ),
+                                  countPriceText(documentSnapshot.id, documentSnapshot["product-price"]),
+                                ],
+                              )
+                            ]),
+                          ),
+                        )
+                            : const ListTile(
+                          tileColor: Color(0xFFFF0000),
+                          title: Text("No product image"),
+                        ),
+                      )
                           : const SizedBox
-                              .shrink(); // Returning an empty widget when count is not greater than 0
+                          .shrink(); // Returning an empty widget when count is not greater than 0
                     }
                   },
                 );
@@ -265,13 +279,13 @@ class _ShoppingCartScreen extends State<ShoppingCartScreen> {
     );
   }
 
-  Future<int> getCountText(String productId) async {
+  Future<int> getCountInt(String productId) async {
     final CollectionReference currentCart =
-        _userss.doc(widget.userDocSnap.id).collection('current_cart');
+    _userss.doc(widget.userDocSnap.id).collection('current_cart');
 
     try {
       DocumentSnapshot snapshot =
-          await currentCart.doc('products_$productId').get();
+      await currentCart.doc('products_$productId').get();
 
       if (!snapshot.exists) {
         return 0;
@@ -287,30 +301,427 @@ class _ShoppingCartScreen extends State<ShoppingCartScreen> {
 
   Widget countText(String productId) {
     final CollectionReference currentCart =
-        _userss.doc(widget.userDocSnap.id).collection('current_cart');
+    _userss.doc(widget.userDocSnap.id).collection('current_cart');
 
-    return FutureBuilder(
-      future: currentCart.doc('products_$productId').get(),
-      builder:
-          (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-        //Error Handling conditions
+    // Initialize ValueNotifier for each product if not already done
+    if (!productCountNotifiers.containsKey(productId)) {
+      productCountNotifiers[productId] = ValueNotifier<int>(0);
+    }
+
+    // Use a FutureBuilder to handle the asynchronous call
+    return FutureBuilder<int>(
+      future: getCountText(productId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Return a loading indicator if the data is still loading
+          return const CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          // Handle error state
+          return Text('Error: ${snapshot.error}');
+        } else {
+          // Update the ValueNotifier with the fetched count
+          productCountNotifiers[productId]?.value = snapshot.data ?? 0;
+
+          // Use ValueListenableBuilder to listen for changes
+          return ValueListenableBuilder<int>(
+            valueListenable: productCountNotifiers[productId]!,
+            builder: (context, count, child) {
+              return Text(count.toString());
+            },
+          );
+        }
+      },
+    );
+  }
+
+  Future<int> getCountText(String productId) async {
+    final CollectionReference currentCart =
+    _userss.doc(widget.userDocSnap.id).collection('current_cart');
+
+    try {
+      DocumentSnapshot snapshot =
+      await currentCart.doc('products_$productId').get();
+
+      if (!snapshot.exists) {
+        return 0;
+      }
+
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+      return data['count'] ?? 0;
+    } catch (e) {
+      print("Error: $e");
+      return 0; // You can handle errors as needed
+    }
+  }
+
+  Widget countPriceText(String productId, int price) {
+    final CollectionReference currentCart =
+    _userss.doc(widget.userDocSnap.id).collection('current_cart');
+
+    // Initialize ValueNotifier for each product if not already done
+    if (!productCountNotifiers.containsKey(productId)) {
+      productCountNotifiers[productId] = ValueNotifier<int>(0);
+    }
+
+    // Use a FutureBuilder to handle the asynchronous call
+    return FutureBuilder<int>(
+      future: getCountText(productId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Return a loading indicator if the data is still loading
+          return const CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          // Handle error state
+          return Text('Error: ${snapshot.error}', style: const TextStyle(fontWeight: FontWeight.bold),);
+        } else {
+          // Update the ValueNotifier with the fetched count
+          productCountNotifiers[productId]?.value = snapshot.data ?? 0;
+
+          // Use ValueListenableBuilder to listen for changes
+          return ValueListenableBuilder<int>(
+            valueListenable: productCountNotifiers[productId]!,
+            builder: (context, count, child) {
+              return Text((count * price).toString(), style: const TextStyle(fontWeight: FontWeight.bold),);
+            },
+          );
+        }
+      },
+    );
+  }
+
+}
+
+class ShoppingCartFooter extends StatefulWidget {
+  final Future<double> totalCostFuture;
+
+  final FirebaseAuth auth;
+  final DocumentSnapshot userDocSnap;
+
+  const ShoppingCartFooter(
+      {Key? key,
+        required this.totalCostFuture,
+        required this.auth,
+        required this.userDocSnap})
+      : super(key: key);
+
+  @override
+  _ShoppingCartFooterState createState() => _ShoppingCartFooterState();
+}
+
+class _ShoppingCartFooterState extends State<ShoppingCartFooter> {
+
+  final CollectionReference _orderss =
+  FirebaseFirestore.instance.collection('orders');
+
+  Future<void> _addOrder() async {
+    try {
+      await _orderss.add({
+        'shipping_address': widget.userDocSnap['address'],
+        'total': widget.totalCostFuture,
+        'uid': widget.auth.currentUser?.uid,
+        'order-time' : Timestamp.fromDate(DateTime.now())
+      });
+
+      // You can add any additional logic or show a success message here if needed.
+    } catch (e) {
+      // Handle errors, e.g., show an error message.
+      print('Error adding product: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<double>(
+      future: widget.totalCostFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.blue,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                const Text(
+                  "Total Cost: \$Loading...",
+                  style: TextStyle(color: Colors.white),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    // Navigate to the Post Processing page
+                    await _orderss.add({
+                      'shipping_address': widget.userDocSnap['address'],
+                      'total': widget.totalCostFuture,
+                      'uid': widget.auth.currentUser?.uid,
+                      'order-time' : Timestamp.fromDate(DateTime.now())
+                    });
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CheckoutPage(
+                            auth: widget.auth,
+                            userDocSnap: widget.userDocSnap,
+                          )),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFe2f3f7)),
+                  child: const Text('Checkout'),
+                ),
+              ],
+            ),
+          );
+        }
+
         if (snapshot.hasError) {
-          return const Text("Something went wrong");
+          return Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.blue,
+            child: const Text(
+              "Error loading total cost",
+              style: TextStyle(color: Colors.white),
+            ),
+          );
         }
 
-        if (snapshot.hasData && !snapshot.data!.exists) {
-          return const Text("0");
-        }
+        double totalCost = snapshot.data ?? 0.0;
 
-        //Data is output to the user
-        if (snapshot.connectionState == ConnectionState.done) {
-          Map<String, dynamic> data =
-              snapshot.data!.data() as Map<String, dynamic>;
-          return Text("${data['count']}");
-        }
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          color: Colors.blue,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                "Total Cost: \$${totalCost.toStringAsFixed(2)}",
+                style: const TextStyle(color: Colors.white),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  emptyUserCart(widget.userDocSnap, () {
+                    // setState to trigger a rebuild after the cart is emptied
+                    setState(() {}
+                  );
 
-        return const Text('Loading');
+                    // Navigate to the Post Processing page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CheckoutPage(
+                          auth: widget.auth,
+                          userDocSnap: widget.userDocSnap,
+                        ),
+                      ),
+                    );
+                  });
+                },
+                child: const Text('Checkout'),
+              ),
+            ],
+          ),
+        );
       },
     );
   }
 }
+
+class CheckoutPage extends StatelessWidget {
+  final FirebaseAuth auth;
+  final DocumentSnapshot userDocSnap;
+
+  const CheckoutPage({super.key, required this.auth, required this.userDocSnap});
+
+  Future<String> getUserName() async {
+    try {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userDocSnap.id)
+          .get();
+
+      if (userSnapshot.exists) {
+        String firstName = userSnapshot.get('firstname') ?? '';
+        String lastName = userSnapshot.get('lastname') ?? '';
+
+        return '$firstName $lastName';
+      }
+    } catch (e) {
+      print("Error getting user's name: $e");
+    }
+
+    return ''; // Return an empty string if there's an error
+  }
+
+  Future<String> getUserAddress() async {
+    try {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userDocSnap.id)
+          .get();
+
+      if (userSnapshot.exists) {
+        return userSnapshot.get('address') ?? '';
+      }
+    } catch (e) {
+      print("Error getting user's address: $e");
+    }
+
+    return 'INVALID ADDRESS'; // Return an empty string if there's an error
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: getUserName(),
+      builder: (context, nameSnapshot) {
+        if (nameSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Post Processing Page'),
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (nameSnapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Post Processing Page'),
+            ),
+            body: Center(
+              child: Container(
+                margin: const EdgeInsets.all(16), // Small margin
+                child: const Text(
+                  "Error loading user's name",
+                  style: TextStyle(fontSize: 20), // Larger text size
+                  textAlign: TextAlign.center, // Center text
+                ),
+              ),
+            ),
+          );
+        }
+
+        String userName = nameSnapshot.data ?? '';
+
+        return FutureBuilder<String>(
+          future: getUserAddress(),
+          builder: (context, addressSnapshot) {
+            if (addressSnapshot.connectionState == ConnectionState.waiting) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Post Processing Page'),
+                ),
+                body: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (addressSnapshot.hasError) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Post Processing Page'),
+                ),
+                body: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(16), // Small margin
+                    child: const Text(
+                      "Error loading user's address",
+                      style: TextStyle(fontSize: 20), // Larger text size
+                      textAlign: TextAlign.center, // Center text
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            String userAddress = addressSnapshot.data ?? '';
+
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Post Processing Page'),
+              ),
+              body: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.all(16), // Small margin
+                        child: Text(
+                          'Thank you, $userName, for shopping with us!',
+                          style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight:
+                              FontWeight.bold), // Larger text size and bold
+                          textAlign: TextAlign.center, // Center text
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        margin: const EdgeInsets.all(16), // Small margin
+                        child: const Text(
+                          'Items will be shipped to the following address:',
+                          style: TextStyle(fontSize: 20), // Larger text size
+                          textAlign: TextAlign.center, // Center text
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(16), // Small margin
+                        child: Text(
+                          userAddress,
+                          style: const TextStyle(fontSize: 18), // Larger text size
+                          textAlign: TextAlign.center, // Center text
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: (){
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (BuildContext context) => HomeScreen(
+                                    auth: auth, userDocSnap: userDocSnap),
+                              ),
+                            );
+                          },
+                          child: const Text('Back Home'))
+                      // Add any additional content or features for the Post Processing Page
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+Future<void> emptyUserCart(
+    DocumentSnapshot userDocSnap, VoidCallback onCartEmptied) async {
+  try {
+    CollectionReference currentCart = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userDocSnap.id)
+        .collection('current_cart');
+
+    // Get all documents in the 'current_cart' collection
+    QuerySnapshot cartSnapshot = await currentCart.get();
+
+    // Delete each document in the 'current_cart' collection
+    for (QueryDocumentSnapshot cartDocSnap in cartSnapshot.docs) {
+      await currentCart.doc(cartDocSnap.id).delete();
+    }
+
+    print('User cart emptied successfully');
+
+    // Call the callback to notify that the cart is emptied
+    onCartEmptied();
+  } catch (e) {
+    print('Error emptying user cart: $e');
+  }
+}
+
