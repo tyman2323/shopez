@@ -176,9 +176,6 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
       _firstNameController.text = documentSnapshot['firstname'];
       _lastNameController.text = documentSnapshot['lastname'];
       _addressController.text = documentSnapshot['address'];
-      //_emailController.text = documentSnapshot['email'];
-      //_passwordController.text = documentSnapshot['password'];
-      //_contentController.text = documentSnapshot['content'].toString();
     }
     await showModalBottomSheet(
         isScrollControlled: true,
